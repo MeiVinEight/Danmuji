@@ -9,6 +9,7 @@ public class Main
 {
 	public static void main(String[] args)
 	{
+		int shortId = Integer.parseInt(args[0]);
 		String cookie;
 		try (FileInputStream fin = new FileInputStream("cookie"))
 		{
@@ -17,16 +18,16 @@ public class Main
 		}
 		catch (FileNotFoundException e)
 		{
-			Danmuji.logger("Cookie file not found, input cookie: ");
+			Danmuji.message("Cookie file not found, input cookie: ");
 			Scanner sc = new Scanner(System.in);
 			cookie = sc.nextLine();
 		}
 		catch (IOException e)
 		{
-			Danmuji.logger(null, e);
+			Danmuji.message(null, e);
 			return;
 		}
-		Danmuji danmu = new Danmuji(cookie, 1937979538);
+		Danmuji danmu = new Danmuji(cookie, shortId);
 		Runtime.getRuntime().addShutdownHook(new Thread(danmu::close));
 	}
 }

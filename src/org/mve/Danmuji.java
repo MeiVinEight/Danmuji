@@ -1,5 +1,6 @@
 package org.mve;
 
+import org.fusesource.jansi.Ansi;
 import org.mve.ws.WebSocket;
 
 import java.nio.charset.StandardCharsets;
@@ -12,43 +13,7 @@ public class Danmuji extends Synchronize
 	public static final int STAT_OVERED  = 0;
 	public static final int STAT_LENGTH  = 1;
 	public static final int STAT_PAYLOAD = 2;
-	public static final String[] FGROUND = {
-		"\u001B[30m",
-		"\u001B[31m",
-		"\u001B[32m",
-		"\u001B[33m",
-		"\u001B[34m",
-		"\u001B[35m",
-		"\u001B[36m",
-		"\u001B[37m",
-		"\u001B[90m",
-		"\u001B[91m",
-		"\u001B[92m",
-		"\u001B[93m",
-		"\u001B[94m",
-		"\u001B[95m",
-		"\u001B[96m",
-		"\u001B[97m",
-	};
-	public static final String[] BGROUND = {
-		"\u001B[40m",
-		"\u001B[41m",
-		"\u001B[42m",
-		"\u001B[43m",
-		"\u001B[44m",
-		"\u001B[45m",
-		"\u001B[46m",
-		"\u001B[47m",
-		"\u001B[100m",
-		"\u001B[101m",
-		"\u001B[102m",
-		"\u001B[103m",
-		"\u001B[104m",
-		"\u001B[105m",
-		"\u001B[106m",
-		"\u001B[107m",
-	};
-	public static final String COLOR_CLEAR = "\u001B[0m";
+	private static boolean special = false;
 	public final int SID;
 	public final int RID;
 	public final WebSocket socket;
@@ -80,7 +45,6 @@ public class Danmuji extends Synchronize
 		String addr = "ws://" + host + ":" + port + "/sub";
 		this.socket = new WebSocket(addr);
 		this.socket.finish();
-		Danmuji.logger("Auth: " + auth.stringify());
 		Message datapack = new Message(Message.PROTO_UNCOMPRESSED, Message.TYPE_AUTH, auth.stringify().getBytes(StandardCharsets.UTF_8));
 		byte[] data = datapack.array();
 		this.socket.write(data, 0, data.length);
@@ -151,7 +115,7 @@ public class Danmuji extends Synchronize
 		}
 		catch (Throwable t)
 		{
-			Danmuji.logger(null, t);
+			Danmuji.message(null, t);
 			this.close();
 		}
 	}
@@ -165,19 +129,32 @@ public class Danmuji extends Synchronize
 			Json user = info.get("user");
 			Json medal = user.get("medal");
 			Json base = user.get("base");
-			String msg = "\u001B[1m" + base.string("name") + ": \u001B[0m" + extra.string("content");
+			String msg = Ansi.ansi()
+				.bold()
+				.a(base.string("name") + ": ")
+				.reset()
+				.a(extra.string("content"))
+				.reset()
+				.toString();
 			if (medal != null)
 				msg = Danmuji.medal(medal) + " " + msg;
-			Danmuji.logger(msg);
+			Danmuji.message(msg);
 		}
 		else if ("INTERACT_WORD".equals(object.string("cmd")))
 		{
 			Json data = object.get("data");
 			Json medal = data.get("uinfo").get("medal");
-			String msg = "\u001B[1m" + FGROUND[6] + data.string("uname") + FGROUND[8] + " 进入直播间";
+			String msg = Ansi.ansi()
+				.bold()
+				.fg(Ansi.Color.CYAN)
+				.a(data.string("uname"))
+				.fgBright(Ansi.Color.BLACK)
+				.a(" 进入直播间")
+				.reset()
+				.toString();
 			if (medal != null)
 				msg = Danmuji.medal(medal) + " " + msg;
-			Danmuji.logger(msg);
+			Danmuji.special(msg);
 		}
 		else if ("SEND_GIFT".equals(object.string("cmd")))
 		{
@@ -188,7 +165,16 @@ public class Danmuji extends Synchronize
 			String uname = data.string("uname");
 			Json sender = data.get("sender_uinfo");
 			Json medal = sender.get("medal");
-			String msg = "\u001B[1m" + FGROUND[6] + uname + COLOR_CLEAR + " \u001B[1m" + FGROUND[8] + action + COLOR_CLEAR;
+			String msg = Ansi.ansi()
+				.bold()
+				.fg(Ansi.Color.CYAN)
+				.a(uname)
+				.reset()
+				.bold()
+				.fgBright(Ansi.Color.BLACK)
+				.a(action)
+				.reset()
+				.toString();
 			if (medal != null)
 				msg = Danmuji.medal(medal) + " " + msg;
 			Json blindGift = data.get("blind_gift");
@@ -196,24 +182,64 @@ public class Danmuji extends Synchronize
 			{
 				action = blindGift.string("gift_action");
 				String originGift = blindGift.string("original_gift_name");
-				msg += FGROUND[3] + "\u001B[1m " + originGift + COLOR_CLEAR + " \u001B[1m" + FGROUND[8] + action + COLOR_CLEAR
-					+ FGROUND[3] + "\u001B[1m " + giftName;
+				msg += Ansi.ansi()
+					.bold()
+					.fg(Ansi.Color.YELLOW)
+					.a(originGift)
+					.fgBright(Ansi.Color.BLACK)
+					.a(action)
+					.fg(Ansi.Color.YELLOW)
+					.a(giftName)
+					.reset();
 			}
 			else
-				msg += FGROUND[3] + "\u001B[1m " + giftName;
-			msg += COLOR_CLEAR;
+				msg += Ansi.ansi()
+					.bold()
+					.fg(Ansi.Color.YELLOW)
+					.a(giftName)
+					.reset();
 			if (count > 1)
-				msg += FGROUND[3] + "\u001B[1m ×" + count + COLOR_CLEAR;
-			Danmuji.logger(msg);
+				msg += Ansi.ansi()
+					.bold()
+					.fg(Ansi.Color.YELLOW)
+					.a(count)
+					.reset();
+			Danmuji.message(msg);
 		}
+		else if ("WATCHED_CHANGE".equals(object.string("cmd")))
+		{
+			Json data = object.get("data");
+			long num = data.number("num").longValue();
+			String msg = Ansi.ansi()
+				.bold()
+				.fgBright(Ansi.Color.BLACK)
+				.a(num + " Watch")
+				.reset()
+				.toString();
+			Danmuji.special(msg);
+		}
+		else if ("LIKE_INFO_V3_UPDATE".equals(object.string("cmd")))
+		{
+			Json data = object.get("data");
+			long clickCount = data.number("click_count").longValue();
+			String msg = Ansi.ansi()
+				.bold()
+				.fgBright(Ansi.Color.BLACK)
+				.a(clickCount + " Like")
+				.reset()
+				.toString();
+			Danmuji.special(msg);
+		}
+		/*
 		else
 		{
 			String cmd = object.string("cmd");
 			String msg = object.stringify();
 			if (cmd != null)
 				msg = cmd + ": " + msg;
-			Danmuji.logger(msg);
+			Danmuji.message(msg);
 		}
+		*/
 	}
 
 	public static void message(Message datapack)
@@ -221,7 +247,7 @@ public class Danmuji extends Synchronize
 		if (datapack.proto == Message.PROTO_PING)
 		{
 			if (datapack.type == Message.TYPE_PING)
-				Danmuji.logger("SERVER PING");
+				Danmuji.message("SERVER PING");
 			return;
 		}
 		if (datapack.proto == Message.PROTO_BRCOMPRESSED)
@@ -265,40 +291,75 @@ public class Danmuji extends Synchronize
 
 	public static String medal(Json medal)
 	{
-		String fg = Danmuji.FGROUND[8];
-		String bg = Danmuji.BGROUND[8];
+		boolean bright = true;
+		Ansi.Color color = Ansi.Color.BLACK;
 		int level = medal.number("level").intValue();
 		if (level >= 20)
 		{
-			fg = Danmuji.FGROUND[6];
-			bg = Danmuji.BGROUND[6];
+			bright = false;
+			color = Ansi.Color.CYAN;
 		}
 		else if (level >= 17)
 		{
-			fg = Danmuji.FGROUND[9];
-			bg = Danmuji.BGROUND[9];
+			color = Ansi.Color.RED;
 		}
 		else if (level >= 13)
 		{
-			fg = Danmuji.FGROUND[5];
-			bg = Danmuji.BGROUND[5];
+			bright = false;
+			color = Ansi.Color.MAGENTA;
 		}
 		else if (level >= 9)
 		{
-			fg = Danmuji.FGROUND[12];
-			bg = Danmuji.BGROUND[12];
+			color = Ansi.Color.BLUE;
 		}
 		else if (level >= 5)
 		{
-			fg = Danmuji.FGROUND[4];
-			bg = Danmuji.BGROUND[4];
+			bright = false;
+			color = Ansi.Color.BLUE;
 		}
-		return bg + "\u001B[1m" + Danmuji.FGROUND[15] + " " + medal.string("name") + " " +
-			fg + Danmuji.BGROUND[15] + " " + medal.number("level") + " " +
-			Danmuji.COLOR_CLEAR;
+		String fg = bright ? Ansi.ansi().fgBright(color).toString() : Ansi.ansi().fg(color).toString();
+		String bg = bright ? Ansi.ansi().bgBright(color).toString() : Ansi.ansi().bg(color).toString();
+		return Ansi.ansi()
+			.bold()
+			.a(bg)
+			.fgBright(Ansi.Color.WHITE)
+			.a(" " + medal.string("name") + " ")
+			.a(fg)
+			.bgBright(Ansi.Color.WHITE)
+			.a(" " + medal.number("level") + " ")
+			.reset()
+			.toString();
 	}
 
-	public static void logger(String msg, Throwable t)
+	public static void message(String msg, Throwable t)
+	{
+		if (Danmuji.special)
+		{
+			Danmuji.special = false;
+			System.out.print(Ansi.ansi().reset().cursorToColumn(0).eraseLine());
+		}
+		System.out.print(Danmuji.timestamp());
+		if (msg != null)
+			System.out.println(msg);
+		if (t != null)
+			t.printStackTrace(System.out);
+		if (msg == null && t == null)
+			System.out.println();
+	}
+
+	public static void message(String msg)
+	{
+		Danmuji.message(msg, null);
+	}
+
+	public static void special(String msg)
+	{
+		special = true;
+		msg = Danmuji.timestamp() + msg;
+		System.out.print(Ansi.ansi().cursorToColumn(0).eraseLine().a(msg));
+	}
+
+	public static String timestamp()
 	{
 		LocalDateTime time = LocalDateTime.now();
 		long ss = time.getSecond();
@@ -317,17 +378,6 @@ public class Danmuji extends Synchronize
 			']',
 			' '
 		};
-		System.out.print(buf);
-		if (msg != null)
-			System.out.println(msg + COLOR_CLEAR);
-		if (t != null)
-			t.printStackTrace(System.out);
-		if (msg == null && t == null)
-			System.out.println();
-	}
-
-	public static void logger(String msg)
-	{
-		Danmuji.logger(msg, null);
+		return new String(buf);
 	}
 }
