@@ -81,7 +81,7 @@ public class Danmuji extends Synchronize
 		this.socket = new WebSocket(addr);
 		this.socket.finish();
 		Danmuji.logger("Auth: " + auth.stringify());
-		Datapack datapack = new Datapack(Datapack.PROTO_UNCOMPRESSED, Datapack.TYPE_AUTH, auth.stringify().getBytes(StandardCharsets.UTF_8));
+		Message datapack = new Message(Message.PROTO_UNCOMPRESSED, Message.TYPE_AUTH, auth.stringify().getBytes(StandardCharsets.UTF_8));
 		byte[] data = datapack.array();
 		this.socket.write(data, 0, data.length);
 		this.socket.blocking(false);
@@ -91,7 +91,7 @@ public class Danmuji extends Synchronize
 
 	public void ping()
 	{
-		byte[] data = new Datapack(Datapack.PROTO_PING, Datapack.TYPE_PING, new byte[0]).array();
+		byte[] data = new Message(Message.PROTO_PING, Message.TYPE_PING, new byte[0]).array();
 		this.socket.write(data, 0, data.length);
 	}
 
@@ -145,7 +145,7 @@ public class Danmuji extends Synchronize
 					this.status = Danmuji.STAT_OVERED;
 					byte[] buf = new byte[this.array.length()];
 					this.array.get(buf);
-					Danmuji.message(Datapack.resolve(buf));
+					Danmuji.message(Message.resolve(buf));
 				}
 			}
 		}
@@ -179,19 +179,52 @@ public class Danmuji extends Synchronize
 				msg = Danmuji.medal(medal) + " " + msg;
 			Danmuji.logger(msg);
 		}
+		else if ("SEND_GIFT".equals(object.string("cmd")))
+		{
+			Json data = object.get("data");
+			int count = data.number("num").intValue();
+			String action = data.string("action");
+			String giftName = data.string("giftName");
+			String uname = data.string("uname");
+			Json sender = data.get("sender_uinfo");
+			Json medal = sender.get("medal");
+			String msg = "\u001B[1m" + FGROUND[6] + uname + COLOR_CLEAR + " \u001B[1m" + FGROUND[8] + action + COLOR_CLEAR;
+			if (medal != null)
+				msg = Danmuji.medal(medal) + " " + msg;
+			Json blindGift = data.get("blind_gift");
+			if (blindGift != null)
+			{
+				action = blindGift.string("gift_action");
+				String originGift = blindGift.string("original_gift_name");
+				msg += FGROUND[3] + "\u001B[1m " + originGift + COLOR_CLEAR + " \u001B[1m" + FGROUND[8] + action + COLOR_CLEAR
+					+ FGROUND[3] + "\u001B[1m " + giftName;
+			}
+			else
+				msg += FGROUND[3] + "\u001B[1m " + giftName;
+			msg += COLOR_CLEAR;
+			if (count > 1)
+				msg += FGROUND[3] + "\u001B[1m ×" + count + COLOR_CLEAR;
+			Danmuji.logger(msg);
+		}
 		else
-			Danmuji.logger(object.stringify());
+		{
+			String cmd = object.string("cmd");
+			String msg = object.stringify();
+			if (cmd != null)
+				msg = cmd + ": " + msg;
+			Danmuji.logger(msg);
+		}
 	}
 
-	public static void message(Datapack datapack)
+	public static void message(Message datapack)
 	{
-		if (datapack.proto == Datapack.PROTO_PING)
+		if (datapack.proto == Message.PROTO_PING)
 		{
-			if (datapack.type == Datapack.TYPE_PING)
+			if (datapack.type == Message.TYPE_PING)
 				Danmuji.logger("SERVER PING");
 			return;
 		}
-		if (datapack.proto == Datapack.PROTO_BRCOMPRESSED)
+		if (datapack.proto == Message.PROTO_BRCOMPRESSED)
 		{
 			// Uncompressing data
 			Inflater inflater = new Inflater();
@@ -220,7 +253,7 @@ public class Danmuji extends Synchronize
 				byte[] data = new byte[len];
 				arr.get(data, 0, 4);
 				buf.get(data, 4, len - 4);
-				Datapack pack = Datapack.resolve(data);
+				Message pack = Message.resolve(data);
 				message(pack);
 			}
 			return;

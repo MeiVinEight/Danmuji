@@ -1,6 +1,6 @@
 package org.mve;
 
-public class Datapack
+public class Message
 {
 	public static final int PROTO_UNCOMPRESSED = 0;
 	public static final int PROTO_PING         = 1;
@@ -15,7 +15,7 @@ public class Datapack
 	public final int type;
 	public final byte[] data;
 
-	public Datapack(int proto, int type, byte[] data)
+	public Message(int proto, int type, byte[] data)
 	{
 		this.proto = proto;
 		this.type = type;
@@ -36,7 +36,7 @@ public class Datapack
 		return data;
 	}
 
-	public static Datapack resolve(byte[] data)
+	public static Message resolve(byte[] data)
 	{
 		Array buf = new Array(data.length);
 		buf.put(data);
@@ -47,6 +47,6 @@ public class Datapack
 		int constVal = (int) buf.integer(4);
 		byte[] payload = new byte[len - 16];
 		buf.get(payload);
-		return new Datapack(proto, type, payload);
+		return new Message(proto, type, payload);
 	}
 }

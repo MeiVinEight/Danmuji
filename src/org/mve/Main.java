@@ -1,6 +1,7 @@
 package org.mve;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Scanner;
 
@@ -14,12 +15,18 @@ public class Main
 			Scanner sc = new Scanner(fin);
 			cookie = sc.nextLine();
 		}
+		catch (FileNotFoundException e)
+		{
+			Danmuji.logger("Cookie file not found, input cookie: ");
+			Scanner sc = new Scanner(System.in);
+			cookie = sc.nextLine();
+		}
 		catch (IOException e)
 		{
 			Danmuji.logger(null, e);
 			return;
 		}
-		Danmuji danmu = new Danmuji(cookie, 12451731);
+		Danmuji danmu = new Danmuji(cookie, 1937979538);
 		Runtime.getRuntime().addShutdownHook(new Thread(danmu::close));
 	}
 }
