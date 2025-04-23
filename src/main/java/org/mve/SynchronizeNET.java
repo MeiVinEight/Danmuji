@@ -13,13 +13,13 @@ public class SynchronizeNET implements Runnable
 	@Override
 	public void run()
 	{
-		long nextTime = System.nanoTime() + (SynchronizeNET.PERIOD_MS * 1000000);
+		long nextTime = System.nanoTime() + (SynchronizeNET.PERIOD_MS * 1_000_000);
 		while (this.running)
 		{
 			this.synchronize();
 			long now = System.nanoTime();
 			if (now < nextTime)  LockSupport.parkNanos(nextTime - now);
-			nextTime += (SynchronizeNET.PERIOD_MS * 1000000);
+			nextTime += (SynchronizeNET.PERIOD_MS * 1_000_000);
 		}
 	}
 
@@ -30,26 +30,23 @@ public class SynchronizeNET implements Runnable
 		{
 			Synchronize task = this.queue.poll();
 			if (task == null) continue;
-
 			if (task.cancelled) continue;
-			if (task.delay > 0)
+
+			if (task.delay == 0)
 			{
-				task.delay--;
-				this.queue.offer(task);
-				continue;
-			}
-			try
-			{
-				task.run();
-			}
-			catch (Throwable ignored)
-			{
-			}
-			if (task.period > 0)
-			{
+				try
+				{
+					task.run();
+				}
+				catch (Throwable ignored)
+				{
+				}
 				task.delay = task.period;
-				this.queue.offer(task);
 			}
+			if (task.delay == 0)
+				continue;
+			task.delay--;
+			this.queue.offer(task);
 		}
 	}
 
