@@ -170,10 +170,12 @@ public class Danmuji extends Synchronize
 				.fg(Ansi.Color.CYAN)
 				.a(uname)
 				.reset()
+				.a(" ")
 				.bold()
 				.fgBright(Ansi.Color.BLACK)
 				.a(action)
 				.reset()
+				.a(" ")
 				.toString();
 			if (medal != null)
 				msg = Danmuji.medal(medal) + " " + msg;
@@ -187,7 +189,7 @@ public class Danmuji extends Synchronize
 					.fg(Ansi.Color.YELLOW)
 					.a(originGift)
 					.fgBright(Ansi.Color.BLACK)
-					.a(action)
+					.a(" " + action + " ")
 					.fg(Ansi.Color.YELLOW)
 					.a(giftName)
 					.reset();
