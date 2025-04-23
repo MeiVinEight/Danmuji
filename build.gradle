@@ -1,0 +1,53 @@
+buildscript {
+    repositories {
+        maven { url 'https://mirrors.cloud.tencent.com/gradle/'}
+        maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+        maven { url 'https://maven.aliyun.com/nexus/content/repositories/jcenter' }
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://www.jitpack.io' }
+        mavenCentral()
+        gradlePluginPortal()
+        google()
+    }
+}
+
+plugins {
+    id 'java'
+}
+
+repositories {
+    maven { url 'https://mirrors.cloud.tencent.com/gradle/'}
+    maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    maven { url 'https://maven.aliyun.com/nexus/content/groups/public' }
+    maven { url 'https://maven.aliyun.com/nexus/content/repositories/jcenter' }
+    maven { url 'https://maven.aliyun.com/repository/jcenter' }
+    maven { url 'https://maven.aliyun.com/repository/google' }
+    maven { url 'https://www.jitpack.io' }
+    mavenCentral()
+    gradlePluginPortal()
+    google()
+}
+
+group = "org.mve"
+version = "1.0.0-Lambda"
+
+dependencies {
+    implementation(files("libs/jansi-2.4.1.jar"))
+    implementation(files("libs/JWS-1.0.0.jar"))
+}
+
+tasks.withType(Jar).configureEach {
+    destinationDirectory = file("libs")
+}
+
+tasks.register('sourceJar', Jar) {
+    dependsOn classes
+    archiveClassifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+tasks.build.finalizedBy(sourceJar)
