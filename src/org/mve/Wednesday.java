@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.zip.Inflater;
 
-public class Danmuji extends Synchronize
+public class Wednesday extends Synchronize
 {
 	public static final int PING_PERIOD = 20;
 	public static final int STAT_OVERED  = 0;
@@ -24,7 +24,7 @@ public class Danmuji extends Synchronize
 	private int status = 0;
 	private final SynchronizeNET synchronize = new SynchronizeNET();
 
-	public Danmuji(String cookie, int shortId)
+	public Wednesday(String cookie, int shortId)
 	{
 		Cookie ck = new Cookie(cookie);
 		this.SID = shortId;
@@ -72,7 +72,7 @@ public class Danmuji extends Synchronize
 	{
 		try
 		{
-			if (System.currentTimeMillis() - (Danmuji.PING_PERIOD * 1000) > this.ping)
+			if (System.currentTimeMillis() - (Wednesday.PING_PERIOD * 1000) > this.ping)
 			{
 				this.ping();
 				this.ping = System.currentTimeMillis();
@@ -80,12 +80,12 @@ public class Danmuji extends Synchronize
 
 			switch (this.status)
 			{
-				case Danmuji.STAT_OVERED:
+				case Wednesday.STAT_OVERED:
 				{
 					this.length = 4;
-					this.status = Danmuji.STAT_LENGTH;
+					this.status = Wednesday.STAT_LENGTH;
 				}
-				case Danmuji.STAT_LENGTH:
+				case Wednesday.STAT_LENGTH:
 				{
 					int read = this.socket.read(this.buffer, 0, this.length);
 					if (read == -1)
@@ -97,25 +97,25 @@ public class Danmuji extends Synchronize
 					this.length = (int) this.array.integer(4);
 					this.array.integer(this.length, 4);
 					this.length -= 4;
-					this.status = Danmuji.STAT_PAYLOAD;
+					this.status = Wednesday.STAT_PAYLOAD;
 				}
-				case Danmuji.STAT_PAYLOAD:
+				case Wednesday.STAT_PAYLOAD:
 				{
 					int read = this.socket.read(this.buffer, 0, Math.min(this.length, this.buffer.length));
 					this.array.put(this.buffer, 0, read);
 					this.length -= read;
 					if (this.length > 0)
 						return;
-					this.status = Danmuji.STAT_OVERED;
+					this.status = Wednesday.STAT_OVERED;
 					byte[] buf = new byte[this.array.length()];
 					this.array.get(buf);
-					Danmuji.message(Message.resolve(buf));
+					Wednesday.message(Message.resolve(buf));
 				}
 			}
 		}
 		catch (Throwable t)
 		{
-			Danmuji.message(null, t);
+			Wednesday.message(null, t);
 			this.close();
 		}
 	}
@@ -137,8 +137,8 @@ public class Danmuji extends Synchronize
 				.reset()
 				.toString();
 			if (medal != null)
-				msg = Danmuji.medal(medal) + " " + msg;
-			Danmuji.message(msg);
+				msg = Wednesday.medal(medal) + " " + msg;
+			Wednesday.message(msg);
 		}
 		else if ("INTERACT_WORD".equals(object.string("cmd")))
 		{
@@ -153,8 +153,8 @@ public class Danmuji extends Synchronize
 				.reset()
 				.toString();
 			if (medal != null)
-				msg = Danmuji.medal(medal) + " " + msg;
-			Danmuji.special(msg);
+				msg = Wednesday.medal(medal) + " " + msg;
+			Wednesday.special(msg);
 		}
 		else if ("SEND_GIFT".equals(object.string("cmd")))
 		{
@@ -178,7 +178,7 @@ public class Danmuji extends Synchronize
 				.a(" ")
 				.toString();
 			if (medal != null)
-				msg = Danmuji.medal(medal) + " " + msg;
+				msg = Wednesday.medal(medal) + " " + msg;
 			Json blindGift = data.get("blind_gift");
 			if (blindGift != null)
 			{
@@ -206,7 +206,7 @@ public class Danmuji extends Synchronize
 					.fg(Ansi.Color.YELLOW)
 					.a(count)
 					.reset();
-			Danmuji.message(msg);
+			Wednesday.message(msg);
 		}
 		else if ("WATCHED_CHANGE".equals(object.string("cmd")))
 		{
@@ -218,7 +218,7 @@ public class Danmuji extends Synchronize
 				.a(num + " Watch")
 				.reset()
 				.toString();
-			Danmuji.special(msg);
+			Wednesday.special(msg);
 		}
 		else if ("LIKE_INFO_V3_UPDATE".equals(object.string("cmd")))
 		{
@@ -230,7 +230,7 @@ public class Danmuji extends Synchronize
 				.a(clickCount + " Like")
 				.reset()
 				.toString();
-			Danmuji.special(msg);
+			Wednesday.special(msg);
 		}
 		/*
 		else
@@ -249,7 +249,7 @@ public class Danmuji extends Synchronize
 		if (datapack.proto == Message.PROTO_PING)
 		{
 			if (datapack.type == Message.TYPE_PING)
-				Danmuji.message("SERVER PING");
+				Wednesday.message("SERVER PING");
 			return;
 		}
 		if (datapack.proto == Message.PROTO_BRCOMPRESSED)
@@ -288,7 +288,7 @@ public class Danmuji extends Synchronize
 		}
 		String json = new String(datapack.data, StandardCharsets.UTF_8);
 		// Danmuji.logger(json);
-		Danmuji.message(Json.resolve(json));
+		Wednesday.message(Json.resolve(json));
 	}
 
 	public static String medal(Json medal)
@@ -335,12 +335,12 @@ public class Danmuji extends Synchronize
 
 	public static void message(String msg, Throwable t)
 	{
-		if (Danmuji.special)
+		if (Wednesday.special)
 		{
-			Danmuji.special = false;
+			Wednesday.special = false;
 			System.out.print(Ansi.ansi().reset().cursorToColumn(0).eraseLine());
 		}
-		System.out.print(Danmuji.timestamp());
+		System.out.print(Wednesday.timestamp());
 		if (msg != null)
 			System.out.println(msg);
 		if (t != null)
@@ -351,13 +351,13 @@ public class Danmuji extends Synchronize
 
 	public static void message(String msg)
 	{
-		Danmuji.message(msg, null);
+		Wednesday.message(msg, null);
 	}
 
 	public static void special(String msg)
 	{
 		special = true;
-		msg = Danmuji.timestamp() + msg;
+		msg = Wednesday.timestamp() + msg;
 		System.out.print(Ansi.ansi().cursorToColumn(0).eraseLine().a(msg));
 	}
 

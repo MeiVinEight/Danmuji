@@ -18,16 +18,16 @@ public class Main
 		}
 		catch (FileNotFoundException e)
 		{
-			Danmuji.message("Cookie file not found, input cookie: ");
+			Wednesday.message("Cookie file not found, input cookie: ");
 			Scanner sc = new Scanner(System.in);
 			cookie = sc.nextLine();
 		}
 		catch (IOException e)
 		{
-			Danmuji.message(null, e);
+			Wednesday.message(null, e);
 			return;
 		}
-		Danmuji danmu = new Danmuji(cookie, shortId);
+		Wednesday danmu = new Wednesday(cookie, shortId);
 		Runtime.getRuntime().addShutdownHook(new Thread(danmu::close));
 	}
 }
