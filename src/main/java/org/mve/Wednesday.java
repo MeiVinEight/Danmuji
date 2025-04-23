@@ -5,6 +5,8 @@ import org.mve.ws.WebSocket;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.zip.Inflater;
 
 public class Wednesday extends Synchronize
@@ -13,7 +15,6 @@ public class Wednesday extends Synchronize
 	public static final int STAT_OVERED  = 0;
 	public static final int STAT_LENGTH  = 1;
 	public static final int STAT_PAYLOAD = 2;
-	private static boolean special = false;
 	public final int SID;
 	public final int RID;
 	public final WebSocket socket;
@@ -23,6 +24,8 @@ public class Wednesday extends Synchronize
 	private int length = 0;
 	private int status = 0;
 	private final SynchronizeNET synchronize = new SynchronizeNET();
+	private final Watching watching = new Watching();
+	private final Queue<Json> jointness = new LinkedList<>();
 
 	public Wednesday(String cookie, int shortId)
 	{
@@ -50,6 +53,7 @@ public class Wednesday extends Synchronize
 		this.socket.write(data, 0, data.length);
 		this.socket.blocking(false);
 		this.synchronize.offer(this);
+		this.synchronize.offer(this.watching);
 		new Thread(this.synchronize).start();
 	}
 
@@ -67,60 +71,7 @@ public class Wednesday extends Synchronize
 		this.socket.close();
 	}
 
-	@Override
-	public void run()
-	{
-		try
-		{
-			if (System.currentTimeMillis() - (Wednesday.PING_PERIOD * 1000) > this.ping)
-			{
-				this.ping();
-				this.ping = System.currentTimeMillis();
-			}
-
-			switch (this.status)
-			{
-				case Wednesday.STAT_OVERED:
-				{
-					this.length = 4;
-					this.status = Wednesday.STAT_LENGTH;
-				}
-				case Wednesday.STAT_LENGTH:
-				{
-					int read = this.socket.read(this.buffer, 0, this.length);
-					if (read == -1)
-						this.close();
-					this.array.put(this.buffer, 0, read);
-					this.length -= read;
-					if (this.length > 0)
-						return;
-					this.length = (int) this.array.integer(4);
-					this.array.integer(this.length, 4);
-					this.length -= 4;
-					this.status = Wednesday.STAT_PAYLOAD;
-				}
-				case Wednesday.STAT_PAYLOAD:
-				{
-					int read = this.socket.read(this.buffer, 0, Math.min(this.length, this.buffer.length));
-					this.array.put(this.buffer, 0, read);
-					this.length -= read;
-					if (this.length > 0)
-						return;
-					this.status = Wednesday.STAT_OVERED;
-					byte[] buf = new byte[this.array.length()];
-					this.array.get(buf);
-					Wednesday.message(Message.resolve(buf));
-				}
-			}
-		}
-		catch (Throwable t)
-		{
-			Wednesday.message(null, t);
-			this.close();
-		}
-	}
-
-	public static void message(Json object)
+	public void message(Json object)
 	{
 		if ("DANMU_MSG".equals(object.string("cmd")))
 		{
@@ -142,19 +93,7 @@ public class Wednesday extends Synchronize
 		}
 		else if ("INTERACT_WORD".equals(object.string("cmd")))
 		{
-			Json data = object.get("data");
-			Json medal = data.get("uinfo").get("medal");
-			String msg = Ansi.ansi()
-				.bold()
-				.fg(Ansi.Color.CYAN)
-				.a(data.string("uname"))
-				.fgBright(Ansi.Color.BLACK)
-				.a(" 进入直播间")
-				.reset()
-				.toString();
-			if (medal != null)
-				msg = Wednesday.medal(medal) + " " + msg;
-			Wednesday.special(msg);
+			this.watching.join(object.get("data"));
 		}
 		else if ("SEND_GIFT".equals(object.string("cmd")))
 		{
@@ -211,26 +150,12 @@ public class Wednesday extends Synchronize
 		else if ("WATCHED_CHANGE".equals(object.string("cmd")))
 		{
 			Json data = object.get("data");
-			long num = data.number("num").longValue();
-			String msg = Ansi.ansi()
-				.bold()
-				.fgBright(Ansi.Color.BLACK)
-				.a(num + " Watch")
-				.reset()
-				.toString();
-			Wednesday.special(msg);
+			this.watching.watching = data.number("num").longValue();
 		}
 		else if ("LIKE_INFO_V3_UPDATE".equals(object.string("cmd")))
 		{
 			Json data = object.get("data");
-			long clickCount = data.number("click_count").longValue();
-			String msg = Ansi.ansi()
-				.bold()
-				.fgBright(Ansi.Color.BLACK)
-				.a(clickCount + " Like")
-				.reset()
-				.toString();
-			Wednesday.special(msg);
+			this.watching.liking = data.number("click_count").longValue();
 		}
 		/*
 		else
@@ -244,7 +169,7 @@ public class Wednesday extends Synchronize
 		*/
 	}
 
-	public static void message(Message datapack)
+	public void message(Message datapack)
 	{
 		if (datapack.proto == Message.PROTO_PING)
 		{
@@ -282,13 +207,89 @@ public class Wednesday extends Synchronize
 				arr.get(data, 0, 4);
 				buf.get(data, 4, len - 4);
 				Message pack = Message.resolve(data);
-				message(pack);
+				this.message(pack);
 			}
 			return;
 		}
 		String json = new String(datapack.data, StandardCharsets.UTF_8);
 		// Danmuji.logger(json);
-		Wednesday.message(Json.resolve(json));
+		this.message(Json.resolve(json));
+	}
+
+	@Override
+	public void run()
+	{
+		try
+		{
+			if (System.currentTimeMillis() - (Wednesday.PING_PERIOD * 1000) > this.ping)
+			{
+				this.ping();
+				this.ping = System.currentTimeMillis();
+			}
+
+			switch (this.status)
+			{
+				case Wednesday.STAT_OVERED:
+				{
+					this.length = 4;
+					this.status = Wednesday.STAT_LENGTH;
+				}
+				case Wednesday.STAT_LENGTH:
+				{
+					int read = this.socket.read(this.buffer, 0, this.length);
+					if (read == -1)
+						this.close();
+					this.array.put(this.buffer, 0, read);
+					this.length -= read;
+					if (this.length > 0)
+						return;
+					this.length = (int) this.array.integer(4);
+					this.array.integer(this.length, 4);
+					this.length -= 4;
+					this.status = Wednesday.STAT_PAYLOAD;
+				}
+				case Wednesday.STAT_PAYLOAD:
+				{
+					int read = this.socket.read(this.buffer, 0, Math.min(this.length, this.buffer.length));
+					this.array.put(this.buffer, 0, read);
+					this.length -= read;
+					if (this.length > 0)
+						return;
+					this.status = Wednesday.STAT_OVERED;
+					byte[] buf = new byte[this.array.length()];
+					this.array.get(buf);
+					this.message(Message.resolve(buf));
+				}
+			}
+		}
+		catch (Throwable t)
+		{
+			Wednesday.message(null, t);
+			this.close();
+		}
+	}
+
+	public static void message(String msg, Throwable t)
+	{
+		System.out.print(Ansi.ansi().reset().cursorToColumn(0).eraseLine());
+		System.out.print(Wednesday.timestamp());
+		if (msg != null)
+			System.out.println(msg);
+		if (t != null)
+			t.printStackTrace(System.out);
+		if (msg == null && t == null)
+			System.out.println();
+	}
+
+	public static void message(String msg)
+	{
+		Wednesday.message(msg, null);
+	}
+
+	public static void special(String msg)
+	{
+		msg = Wednesday.timestamp() + msg;
+		System.out.print(Ansi.ansi().cursorToColumn(0).eraseLine().a(msg));
 	}
 
 	public static String medal(Json medal)
@@ -331,34 +332,6 @@ public class Wednesday extends Synchronize
 			.a(" " + medal.number("level") + " ")
 			.reset()
 			.toString();
-	}
-
-	public static void message(String msg, Throwable t)
-	{
-		if (Wednesday.special)
-		{
-			Wednesday.special = false;
-			System.out.print(Ansi.ansi().reset().cursorToColumn(0).eraseLine());
-		}
-		System.out.print(Wednesday.timestamp());
-		if (msg != null)
-			System.out.println(msg);
-		if (t != null)
-			t.printStackTrace(System.out);
-		if (msg == null && t == null)
-			System.out.println();
-	}
-
-	public static void message(String msg)
-	{
-		Wednesday.message(msg, null);
-	}
-
-	public static void special(String msg)
-	{
-		special = true;
-		msg = Wednesday.timestamp() + msg;
-		System.out.print(Ansi.ansi().cursorToColumn(0).eraseLine().a(msg));
 	}
 
 	public static String timestamp()
