@@ -5,8 +5,6 @@ import org.mve.ws.WebSocket;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.zip.Inflater;
 
 public class Wednesday extends Synchronize
@@ -25,7 +23,6 @@ public class Wednesday extends Synchronize
 	private int status = 0;
 	private final SynchronizeNET synchronize = new SynchronizeNET();
 	private final Watching watching = new Watching();
-	private final Queue<Json> jointness = new LinkedList<>();
 
 	public Wednesday(String cookie, int shortId)
 	{
