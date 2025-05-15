@@ -143,6 +143,7 @@ public class Wednesday extends Synchronize
 				msg += Ansi.ansi()
 					.bold()
 					.fg(Ansi.Color.YELLOW)
+					.a("×")
 					.a(count)
 					.reset();
 			Wednesday.message(msg);
